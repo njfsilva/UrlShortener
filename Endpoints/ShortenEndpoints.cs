@@ -1,10 +1,12 @@
-﻿using URLShortener.Entities;
+﻿using MediatR;
+using URLShortener.Entities;
+using URLShortener.Services.Commands;
+using URLShortener.Services.Queries;
 
 namespace URLShortener.Endpoints
 {
     using Carter;
     using DTOs;
-    using Services;
 
     public class ShortenEndpoints : ICarterModule
     {
@@ -16,23 +18,23 @@ namespace URLShortener.Endpoints
             app.MapGet("/redirect/{code}", RedirectToLongUrl);
         }
 
-        private static async Task<IResult> RedirectToLongUrl(string code, UrlShortenService urlShortenService, HttpContext httpContext)
+        private static async Task<IResult> RedirectToLongUrl(string code, ISender mediator, HttpContext httpContext)
         {
             var origin = httpContext.Request.Headers.Origin.ToString();
 
-            var shortenedUrl = await urlShortenService.GetShortUrl(code, origin);
+            var shortenedUrl = await mediator.Send(new GetShortUrlQuery(code, origin));
 
             return shortenedUrl != null ? Results.Redirect(shortenedUrl.LongUrl) : Results.NotFound();
         }
 
-        public async Task<IResult> ShortenUrl(ShortenRequest request, UrlShortenService urlShortenService, HttpContext httpContext)
+        public async Task<IResult> ShortenUrl(ShortenRequest request, ISender mediator, HttpContext httpContext)
         {
             if (!Uri.TryCreate(request.Url, UriKind.Absolute, out _))
             {
                 return Results.BadRequest("The URL is invalid");
             }
 
-            var code = await urlShortenService.GenerateCode();
+            var code = await mediator.Send(new GenerateUrlCodeCommand());
 
             var shortenedUrl = new ShortenedUrl
             {
@@ -42,7 +44,7 @@ namespace URLShortener.Endpoints
                 CreateDate = DateTimeOffset.UtcNow
             };
 
-            await urlShortenService.InsertNew(shortenedUrl);
+            await mediator.Send(new CreateNewCodeCommand(shortenedUrl));
 
             return Results.Ok(shortenedUrl);
         }

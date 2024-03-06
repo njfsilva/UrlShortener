@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Caching.Memory;
 using URLShortener.Data;
 using URLShortener.Entities;
 using URLShortener.HostedServices;
@@ -21,8 +20,8 @@ namespace URLShortener
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddCarter();
-
             builder.Services.AddMemoryCache();
+            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 
             builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDb"));
 
